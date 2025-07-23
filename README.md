@@ -64,8 +64,9 @@ This setup is recommended only if you are running TeslaMate Telegram Bot **on yo
             # - MQTT_BROKER_USERNAME=username #optional, only needed when broker has authentication enabled
             # - MQTT_BROKER_PASSWORD=password #optional, only needed when broker has authentication enabled
             # - MQTT_NAMESPACE=namespace # optional, only needed when you specified MQTT_NAMESPACE on your TeslaMate installation
-            - TELEGRAM_BOT_API_KEY=secret_api_key
-            - TELEGRAM_BOT_CHAT_ID=secret_chat_id
+            # 카톡에서 /방키를 받아서 아래 방키를 입력하세요
+            - SEND_KAKAO_URL=https://perpet.synology.me:5050/kakao/[방키]
+            - GET_KAKAO_URL=https://perpet.synology.me:5050/kakaoget/[방키]
           ports:
             - 1883
    ```

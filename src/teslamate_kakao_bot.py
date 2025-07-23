@@ -10,6 +10,8 @@ import json
 from datetime import datetime
 from dotenv import load_dotenv
 import paho.mqtt.client as mqtt
+from teslaLib import TeslaLib
+
 # from telegram import Bot
 # from telegram.constants import ParseMode
 
@@ -23,7 +25,8 @@ MQTT_BROKER_KEEPALIVE = 60
 MQTT_BROKER_USERNAME_DEFAULT = ''
 MQTT_BROKER_PASSWORD_DEFAULT = ''
 MQTT_NAMESPACE_DEFAULT = ''
-TESLA_EVENTS_DEFAULT = [{'event':'all', 'alarm': True,"eventValue":""},
+TESLA_EVENTS_DEFAULT = [{'event':'전체알람', 'alarm': True,"eventValue":""},
+                        {'event':'드라이브', 'alarm': True,"eventValue":""},
                         {'event':'state', 'alarm': True,"eventValue":""},
                         {'event':'sentry_mode', 'alarm': True,"eventValue":""}]
 
@@ -71,10 +74,16 @@ handler.suffix = "%Y-%m-%d"  # 날짜 형식 지정
 formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
 handler.setFormatter(formatter)
 
+
+# 콘솔 출력 핸들러
+console = logging.StreamHandler()
+console.setFormatter(logging.Formatter('%(levelname)s - %(message)s'))
+
 # 로거 설정
 logger = logging.getLogger("MyLogger")
 logger.setLevel(logging.INFO)
 logger.addHandler(handler)
+logger.addHandler(console)
 
 # Global state
 class State:
@@ -89,7 +98,7 @@ class State:
         
 # Global state
 state = State()
-
+teslaLib = TeslaLib()
 
 def get_env_variable(var_name, default_value=None):
     """ Get the environment variable or return a default value"""
@@ -162,17 +171,53 @@ def on_message(client, userdata, msg):  # pylint: disable=unused-argument
 
     try:
         
-        for item in state.events:
+        
+        oldState = teslaLib.isDriving
+        
+        teslaLib.update()
+
+        
+        if teslaLib.isDriving != oldState:
+            if teslaLib.isDriving:
+                send_kakao_message(state.sendKakao_url, f"드라이브 : 주행정지 => 주행시작")
+            else :
+                send_kakao_message(state.sendKakao_url, f"드라이브 : 주행시작 => 주행정지")
+                pathUrl = teslaLib.getPathUrlNClear()
+                send_kakao_message(state.sendKakao_url, f"드라이브경로 : {pathUrl}")
+
+        
+        for i, item in  enumerate(state.events):
             event = item["event"]
-            if event == "all" and item["alarm"] == True:
+            
+            
+            if event == "전체알람" and item["alarm"] == False:
                 break
+            if event == "드라이브":
+                if teslaLib.isDriving:
+                    item["eventValue"] = "주행중"
+                else:
+                    item["eventValue"] = "주차중"
             
             eventValue = msg.payload.decode()
+            
+            if msg.topic == TESLAMATE_MQTT_TOPIC_BASE+ "speed":
+                
+                teslaLib.updatePower(int(eventValue))
+                
+            
+            
+                    
+            if msg.topic == TESLAMATE_MQTT_TOPIC_BASE+ "location":
+                teslaLib.updateLocation(eventValue)
+                return
+            
             if item["alarm"] == True and msg.topic == TESLAMATE_MQTT_TOPIC_BASE + event and item["eventValue"] != eventValue:
                 oldEventValue = item["eventValue"]
                 item["eventValue"] = eventValue
-                send_kakao_message(state.sendKakao_url, f"{event} : {oldEventValue} => {eventValue}")
+                logger.info("값변경 : %s %s", msg.topic, msg.payload.decode())
                 saveData(state.events)
+                send_kakao_message(state.sendKakao_url, f"{event} : {oldEventValue} => {eventValue}")
+                
                 
     except Exception as e :
         logger.info(f"Received error : {e}")
@@ -365,7 +410,7 @@ def sendHowTouse():
             "/알람끄기,[이벤트이름]\n" \
             "/알람켜기,[이벤트이름]\n" \
             "/알람끄기,state <= 차량상태 이벤트 끄기 \n" \
-            "/알람끄기,all <= 모든 이벤트 끄기"
+            "/알람끄기,전체알람 <= 모든 이벤트 끄기"
                         
                 
     send_kakao_message(state.sendKakao_url, start_message)
@@ -378,7 +423,7 @@ async def main():
     
     
     try:
-        client = setup_mqtt_client()
+        
         state.sendKakao_url = get_env_variable(SEND_KAKAO_URL)
         state.getKakao_url= get_env_variable(GET_KAKAO_URL)
         
@@ -390,6 +435,7 @@ async def main():
         
         sendHowTouse()
 
+        client = setup_mqtt_client()
         client.loop_start()
         
         try:
