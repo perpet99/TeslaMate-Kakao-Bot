@@ -42,7 +42,7 @@ https://github.com/JakobLichterfeld/TeslaMate-Telegram-Bot
    ```
 - python -m venv myven
 - linux , Mac => source myven/bin/activate
-- 윈도우즈 => source myven/Scripts/activate
+- 윈도우즈 => myven/Scripts/activate
 - python -m pip install -r ./src/requirements.txt
 - python .\src\teslamate_kakao_bot.py
 
@@ -78,6 +78,10 @@ https://github.com/JakobLichterfeld/TeslaMate-Telegram-Bot
    ```bash
    docker compose up -d
    ```
+### 도커설치 도커빌드
+
+docker build -t teslamate-kakao-bot:latest .
+
 
 ## 업데이트
 
