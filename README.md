@@ -6,6 +6,8 @@
 
 https://github.com/JakobLichterfeld/TeslaMate-Telegram-Bot
 
+테슬라메이트 사용자 및 문의 방
+https://open.kakao.com/o/glqIjMIh
 
 
 ## 데모동영상
@@ -61,7 +63,7 @@ https://github.com/JakobLichterfeld/TeslaMate-Telegram-Bot
 
    ```yml title="docker-compose.yml"
       services:
-        teslamatetelegrambot:
+        teslamatekabot:
           image: perpet77/teslamate-kakao-bot:latest
           restart: unless-stopped
           environment:
@@ -85,7 +87,7 @@ https://github.com/JakobLichterfeld/TeslaMate-Telegram-Bot
    ```
 ### 도커설치 도커빌드
 
-docker build -t teslamate-kakao-bot:latest .
+docker build -t perpet77/teslamate-kakao-bot:latest .
 
 
 ## 업데이트
