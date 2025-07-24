@@ -1,65 +1,65 @@
-# TeslaMate Telegram Bot
+# 테슬라메이트 카카오봇
 
-[![CI](https://github.com/JakobLichterfeld/TeslaMate-Telegram-Bot/actions/workflows/buildx.yml/badge.svg)](https://github.com/JakobLichterfeld/TeslaMate-Telegram-Bot/actions/workflows/buildx.yml)
-[![version](https://img.shields.io/docker/v/teslamatetelegrambot/teslamatetelegrambot/latest)](https://hub.docker.com/r/teslamatetelegrambot/teslamatetelegrambot)
-[![docker pulls](https://img.shields.io/docker/pulls/teslamatetelegrambot/teslamatetelegrambot?color=%23099cec)](https://hub.docker.com/r/teslamatetelegrambot/teslamatetelegrambot)
-[![image size](https://img.shields.io/docker/image-size/teslamatetelegrambot/teslamatetelegrambot/latest)](https://hub.docker.com/r/teslamatetelegrambot/teslamatetelegrambot)
-[![Donate](https://img.shields.io/badge/Donate-PayPal-informational.svg?logo=paypal)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=ZE9EHN48GYWMN&source=url)
+이 프로젝트는 테슬라메이트를 이용하여 차량의 변경된 정보를 자신의 카톡에 알려주는 프로젝트 입니다.
 
-This is a telegram bot written in Python to notify by Telegram message when a new SW update for your Tesla is available. It uses the MQTT topic which [TeslaMate](https://github.com/adriankumpf/teslamate) offers.
+해당 프로젝트는 아래 프로젝트를 기반으로 만들어졌습니다.
 
-## Screenshots
+https://github.com/JakobLichterfeld/TeslaMate-Telegram-Bot
 
-<p align="center">
-  <img src="screenshots/telegram_message_sw_update.jpg" alt="Telegram Message: SW Update available" title="telegram_message_sw_update" width="180" height="320" />
-</p>
 
-## Table of contents
 
-- [TeslaMate Telegram Bot](#teslamate-telegram-bot)
-  - [Screenshots](#screenshots)
-  - [Table of contents](#table-of-contents)
-  - [Features](#features)
-  - [Requirements](#requirements)
-  - [Installation](#installation)
-  - [Update](#update)
-  - [Contributing](#contributing)
-  - [Donation](#donation)
-  - [Disclaimer](#disclaimer)
+## 데모동영상
 
-## Features
 
-- [x] Sends a telegram message to you if an update for your tesla is available
+## 기능
 
-## Requirements
+- [x] 테슬라 온라인 상태 유무
+- [x] 테슬라 주행시작 종료 알람
+- [x] 테슬라 주행시작 종료 알람
 
-- A Machine that's always on and runs [TeslaMate](https://github.com/adriankumpf/teslamate)
-- Docker _(if you are new to Docker, see [Installing Docker](https://docs.docker.com/engine/install/) and [Docker Compose](https://docs.docker.com/compose/install/linux/))_
-- External internet access, to send telegram messages.
-- A mobile with [Telegram](https://telegram.org/) client installed
-- your own Telegram Bot, see [Creating a new telegram bot](https://core.telegram.org/bots#6-botfather)
-- your own Telegram chat ID, see [get your telegram chat ID](https://docs.influxdata.com/kapacitor/v1.5/event_handlers/telegram/#get-your-telegram-chat-id)
+## 요구사항
 
+- 친구추가=>카카오톡 ID=> "pushbot" => 추가
+- 1:1 대화 또는 그룹방에 초대
+- 채팅방에 "/방키" 입력 하여 [방키]값 확인
+  
 ## Installation
 
-Make sure you fulfill the [Requirements](#requirements).
+- 테슬라 메이트와 같은 네트워크 환경에 구축 및 테스트
 
-It is recommended to backup your data first.
+### 카카오톡 방키 
 
-This document provides the necessary steps for installation of TeslaMate Telegram Bot on an any system that runs Docker.
+- 친구추가=>카카오톡 ID=> "pushbot" => 추가
+- 1:1 대화 또는 그룹방에 초대
+- 채팅방에 "/방키" 입력 하여 [방키]값 확인
 
-This setup is recommended only if you are running TeslaMate Telegram Bot **on your home network**, as otherwise your telegram API tokens might be at risk.
+### 테스트 빌드
 
-1. Create a file called `docker-compose.yml` with the following content (adopt with your own values):
+- teslamate_kakao_bot.py 파일 수정
+- SEND_KAKAO_URL='https://perpet.synology.me:5050/kakao/[방키]'  <= 카톡봇에서 얻은 방키로 수정
+- GET_KAKAO_URL='https://perpet.synology.me:5050/kakaoget/[방키]'  <= 카톡봇에서 얻은 방키로 수정
+- python -m venv myven
+- linux , Mac => source myven/bin/activate
+- 윈도우즈 => source myven/Scripts/activate
+- python -m pip install -r ./src/requirements.txt
+- python .\src\teslamate_kakao_bot.py
+
+### 도커설치
+
+전문가가 아니면 테슬라 메이트와 같은 네트워크에 환경 구축하세요
+
+도커 설치전 카카오톡 방키 확인
+
+1. `docker-compose.yml` 파일을 생성하고 아래 내용을 입력합니다. 
 
    ```yml title="docker-compose.yml"
       services:
         teslamatetelegrambot:
-          image: teslamatetelegrambot/teslamatetelegrambot:latest
+          image: perpet77/teslamate-kakao-bot:latest
           restart: unless-stopped
           environment:
             # - CAR_ID=1 # optional, defaults to 1
-            - MQTT_BROKER_HOST=IP_Address # defaults to 127.0.0.1
+            - MQTT_BROKER_HOST=mosquitto # defaults to 127.0.0.1
             # - MQTT_BROKER_PORT=1883 #optional, defaults to 1883
             # - MQTT_BROKER_USERNAME=username #optional, only needed when broker has authentication enabled
             # - MQTT_BROKER_PASSWORD=password #optional, only needed when broker has authentication enabled
@@ -71,15 +71,13 @@ This setup is recommended only if you are running TeslaMate Telegram Bot **on yo
             - 1883
    ```
 
-2. Build and start the docker container with `docker compose up`. To run the containers in the background add the `-d` flag:
+2. 빌드 도커 실행 `docker compose up`. 백그라운드 실행은 `-d` flag:
 
    ```bash
    docker compose up -d
    ```
 
-## Update
-
-Check out the [release notes](https://github.com/JakobLichterfeld/TeslaMate_Telegram_Bot/releases) before upgrading!
+## 업데이트
 
 Pull the new images:
 
@@ -93,20 +91,7 @@ and restart the stack with `docker compose up`. To run the containers in the bac
 docker compose up -d
 ```
 
-## Contributing
+## 중요사항
 
-All contributions are welcome and greatly appreciated!
+Tesla는 Tesla API 전반, 특히 이 소프트웨어의 사용을 보증하지 않습니다. 사용에 따른 모든 책임은 사용자에게 있습니다.
 
-## Donation
-
-Maintaining this project isn't effortless, or free. If you would like to kick in and help me cover those costs, that would be awesome. If you don't, no problem; just share your love and show your support.
-
-<p align="center">
-  <a href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=ZE9EHN48GYWMN&source=url">
-    <img src="screenshots/paypal-donate-button.png" alt="Donate with PayPal" />
-  </a>
-</p>
-
-## Disclaimer
-
-Please note that the use of the Tesla API in general and this software in particular is not endorsed by Tesla. Use at your own risk.
