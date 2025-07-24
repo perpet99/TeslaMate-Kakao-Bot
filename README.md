@@ -36,8 +36,10 @@ https://github.com/JakobLichterfeld/TeslaMate-Telegram-Bot
 ### 테스트 빌드
 
 - teslamate_kakao_bot.py 파일 수정
-- SEND_KAKAO_URL='https://perpet.synology.me:5050/kakao/[방키]'  <= 카톡봇에서 얻은 방키로 수정
-- GET_KAKAO_URL='https://perpet.synology.me:5050/kakaoget/[방키]'  <= 카톡봇에서 얻은 방키로 수정
+   ```
+   SEND_KAKAO_URL='https://perpet.synology.me:5050/kakao/[방키]'
+   GET_KAKAO_URL='https://perpet.synology.me:5050/kakaoget/[방키]'
+   ```
 - python -m venv myven
 - linux , Mac => source myven/bin/activate
 - 윈도우즈 => source myven/Scripts/activate
