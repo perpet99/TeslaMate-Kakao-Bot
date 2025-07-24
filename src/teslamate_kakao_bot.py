@@ -137,13 +137,21 @@ def on_connect(client, userdata, flags, reason_code, properties=None):  # pylint
     logger.debug("Connected with result code: %s", reason_code)
     if reason_code == "Unsupported protocol version":
         logger.error("Unsupported protocol version")
+        client_status = "Unsupported protocol version"
+        send_kakao_message(state.sendKakao_url, f"테슬라 메이트 접속실패(Unsupported protocol version)")
         sys.exit(1)
     if reason_code == "Client identifier not valid":
         logger.error("Client identifier not valid")
+        client_status = "Client identifier not valid"
+        send_kakao_message(state.sendKakao_url, f"테슬라 메이트 접속실패(Client identifier not valid)")
         sys.exit(1)
     if reason_code == 0:
+        client_status = "접속완료"
+        send_kakao_message(state.sendKakao_url, f"테슬라 메이트 접속성공")
         logger.info("Connected successfully to MQTT broker")
     else:
+        send_kakao_message(state.sendKakao_url, f"테슬라 메이트 접속실패(Connection failed)")
+        client_status = "Connection failed"
         logger.error("Connection failed")
         sys.exit(1)
 
@@ -234,12 +242,34 @@ def on_message(client, userdata, msg):  # pylint: disable=unused-argument
     #         state.update_available_message_sent = False  # Reset the message sent flag
 
 
+# 전역 상태 변수 추가
+client_status = "접속중"
+
+# def on_connect(client, userdata, flags, reason_code, properties=None):
+#     global client_status
+#     if reason_code == 0:
+#         client_status = "접속완료"
+#     else:
+#         client_status = "접속실패"
+    # ...existing code...
+
+def on_disconnect(client, userdata, reason_code, properties=None):
+    global client_status
+    client_status = "접속실패"
+    send_kakao_message(state.sendKakao_url, f"테슬라 메이트 접속실패")
+    logger.info("MQTT disconnected. Reason: %s", reason_code)
+
+def get_mqtt_status():
+    """Return the current MQTT client status."""
+    return client_status
+
 def setup_mqtt_client():
     """ Setup the MQTT client """
     logger.info("Setting up the MQTT client...")
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
     client.on_connect = on_connect
     client.on_message = on_message
+    client.on_disconnect = on_disconnect
 
     username = get_env_variable(MQTT_BROKER_USERNAME, MQTT_BROKER_USERNAME_DEFAULT)
     password = get_env_variable(MQTT_BROKER_PASSWORD, MQTT_BROKER_PASSWORD_DEFAULT)
@@ -254,6 +284,9 @@ def setup_mqtt_client():
                                           )
         raise EnvironmentError(error_message_mqtt_broker_port) from value_error_mqtt_broker_port
     logger.info("Connect to MQTT broker at %s:%s", host, port)
+    send_kakao_message(state.sendKakao_url, f"테슬라메이트 접속시도({host}:{port})")
+    
+
     client.connect(host, port, MQTT_BROKER_KEEPALIVE)
 
     return client
@@ -360,7 +393,10 @@ async def check_state_and_send_messages(url):
 
 def send_kakao_message(webhook_url, message):
     try:
-        
+        # state_message = ""
+        # if get_mqtt_status() != "접속중":
+        #     state_message = "테슬라 메이트 " + get_mqtt_status()
+            
         data = {
             "content": message  # 디스코드 채널에 표시될 메시지
         }
@@ -420,8 +456,6 @@ async def main():
     """ Main function"""
     logger.info("카카오봇 시작.")
     
-    
-    
     try:
         
         state.sendKakao_url = get_env_variable(SEND_KAKAO_URL)
@@ -429,15 +463,16 @@ async def main():
         
         state.events = loadData()
         if state.events == None:
+            # state.events = TESLA_EVENTS_DEFAULT
             state.events = get_env_variable(TESLA_EVENTS,TESLA_EVENTS_DEFAULT)
         
         logger.info (state.events)
         
         sendHowTouse()
-
+    
         client = setup_mqtt_client()
         client.loop_start()
-        
+    
         try:
             count = 0
             while True:
@@ -450,7 +485,9 @@ async def main():
             logger.info("Exiting after receiving SIGINT (Ctrl+C) signal.")
     except EnvironmentError as e:
         logger.error(e)
-        logger.info("Sleeping for 30 minutes before exiting or restarting, depending on your restart policy.")
+        send_kakao_message(state.sendKakao_url, f"카톡봇 에러  {e}")
+        send_kakao_message(state.sendKakao_url, f"테슬라 접속상태({get_mqtt_status()})")
+        logger.info("Sleeping for 30 seconds before exiting or restarting, depending on your restart policy.")
         await asyncio.sleep(30)
 
     # clean exit
@@ -459,9 +496,7 @@ async def main():
     logger.info("Disconnected from MQTT broker.")
     client.loop_stop()
     logger.info("Exiting the Teslamate Telegram bot.")
-    stop_message = "<b>" \
-        "Teslamate Telegram Bot stopped. 🛑" \
-        "</b>\n "
+    stop_message = "테슬라메이트 카톡봇 정지"
     send_kakao_message(state.sendKakao_url, stop_message)
     # await bot.close()
 
