@@ -43,7 +43,7 @@ https://github.com/JakobLichterfeld/TeslaMate-Telegram-Bot
    ```
    SEND_KAKAO_URL='https://perpet.synology.me:5050/kakao/[방키]'
    GET_KAKAO_URL='https://perpet.synology.me:5050/kakaoget/[방키]'
-   MQTT_BROKER_HOST=[설치된 MQTT IP 또는 내부 컨테이너 아이피]
+   MQTT_BROKER_HOST=[설치된 MQTT 호스트 IP 또는 내부 컨테이너 아이피]
    ```
 - python -m venv myven
 - linux , Mac => source myven/bin/activate
