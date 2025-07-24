@@ -27,11 +27,15 @@ https://github.com/JakobLichterfeld/TeslaMate-Telegram-Bot
 
 - 테슬라 메이트와 같은 네트워크 환경에 구축 및 테스트
 
-### 카카오톡 방키 
+### 카카오톡 방키 확인
 
 - 친구추가=>카카오톡 ID=> "pushbot" => 추가
 - 1:1 대화 또는 그룹방에 초대
 - 채팅방에 "/방키" 입력 하여 [방키]값 확인
+
+### MQTT IP 확인
+
+- MQTT 컨테이너 생성시 기본포트 1883 포트를 외부에서 접속하도록 설정합니다
 
 ### 테스트 빌드
 
@@ -39,6 +43,7 @@ https://github.com/JakobLichterfeld/TeslaMate-Telegram-Bot
    ```
    SEND_KAKAO_URL='https://perpet.synology.me:5050/kakao/[방키]'
    GET_KAKAO_URL='https://perpet.synology.me:5050/kakaoget/[방키]'
+   MQTT_BROKER_HOST=[설치된 MQTT IP 또는 내부 컨테이너 아이피]
    ```
 - python -m venv myven
 - linux , Mac => source myven/bin/activate
