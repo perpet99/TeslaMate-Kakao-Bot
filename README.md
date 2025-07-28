@@ -6,6 +6,8 @@
 
 https://github.com/JakobLichterfeld/TeslaMate-Telegram-Bot
 
+테슬라메이트 사용자 및 문의 방
+https://open.kakao.com/o/glqIjMIh
 
 
 ## 데모동영상
@@ -16,6 +18,9 @@ https://github.com/JakobLichterfeld/TeslaMate-Telegram-Bot
 - [x] 테슬라 온라인 상태 유무
 - [x] 테슬라 주행시작 종료 알람
 - [x] 테슬라 주행시작 종료 알람
+- [x] 테슬라 주행경로 맵
+- [ ] 전비 계산
+- [ ] 홈주소 및 도착 예상시간
 
 ## 요구사항
 
@@ -27,11 +32,15 @@ https://github.com/JakobLichterfeld/TeslaMate-Telegram-Bot
 
 - 테슬라 메이트와 같은 네트워크 환경에 구축 및 테스트
 
-### 카카오톡 방키 
+### 카카오톡 방키 확인
 
 - 친구추가=>카카오톡 ID=> "pushbot" => 추가
 - 1:1 대화 또는 그룹방에 초대
 - 채팅방에 "/방키" 입력 하여 [방키]값 확인
+
+### MQTT IP 확인
+
+- MQTT 컨테이너 생성시 기본포트 1883 포트를 외부에서 접속하도록 설정합니다
 
 ### 테스트 빌드
 
@@ -39,10 +48,11 @@ https://github.com/JakobLichterfeld/TeslaMate-Telegram-Bot
    ```
    SEND_KAKAO_URL='https://perpet.synology.me:5050/kakao/[방키]'
    GET_KAKAO_URL='https://perpet.synology.me:5050/kakaoget/[방키]'
+   MQTT_BROKER_HOST=[설치된 MQTT 호스트 IP 또는 내부 컨테이너 아이피]
    ```
 - python -m venv myven
 - linux , Mac => source myven/bin/activate
-- 윈도우즈 => source myven/Scripts/activate
+- 윈도우즈 => myven/Scripts/activate
 - python -m pip install -r ./src/requirements.txt
 - python .\src\teslamate_kakao_bot.py
 
@@ -56,7 +66,7 @@ https://github.com/JakobLichterfeld/TeslaMate-Telegram-Bot
 
    ```yml title="docker-compose.yml"
       services:
-        teslamatetelegrambot:
+        teslamatekabot:
           image: perpet77/teslamate-kakao-bot:latest
           restart: unless-stopped
           environment:
@@ -78,6 +88,10 @@ https://github.com/JakobLichterfeld/TeslaMate-Telegram-Bot
    ```bash
    docker compose up -d
    ```
+### 도커설치 도커빌드
+
+docker build -t perpet77/teslamate-kakao-bot:latest .
+
 
 ## 업데이트
 
