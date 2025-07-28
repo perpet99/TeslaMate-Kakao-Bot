@@ -92,7 +92,6 @@ class State:
         self.update_available = False               # Flag to indicate if an update is available
         self.update_available_message_sent = False  # Flag to indicate if the message has been sent
         self.update_version = "unknown"             # The version of the update
-        self.events = []
         self.getKakao_url = ""
         self.sendKakao_url = ""
         
@@ -138,19 +137,19 @@ def on_connect(client, userdata, flags, reason_code, properties=None):  # pylint
     if reason_code == "Unsupported protocol version":
         logger.error("Unsupported protocol version")
         client_status = "Unsupported protocol version"
-        send_kakao_message(state.sendKakao_url, f"테슬라 메이트 접속실패(Unsupported protocol version)")
+        send_kakao_message(state.sendKakao_url, f"테슬라메이트 접속실패(Unsupported protocol version)")
         sys.exit(1)
     if reason_code == "Client identifier not valid":
         logger.error("Client identifier not valid")
         client_status = "Client identifier not valid"
-        send_kakao_message(state.sendKakao_url, f"테슬라 메이트 접속실패(Client identifier not valid)")
+        send_kakao_message(state.sendKakao_url, f"테슬라메이트 접속실패(Client identifier not valid)")
         sys.exit(1)
     if reason_code == 0:
         client_status = "접속완료"
-        send_kakao_message(state.sendKakao_url, f"테슬라 메이트 접속성공")
+        send_kakao_message(state.sendKakao_url, f"테슬라메이트 접속성공")
         logger.info("Connected successfully to MQTT broker")
     else:
-        send_kakao_message(state.sendKakao_url, f"테슬라 메이트 접속실패(Connection failed)")
+        send_kakao_message(state.sendKakao_url, f"테슬라메이트 접속실패(Connection failed)")
         client_status = "Connection failed"
         logger.error("Connection failed")
         sys.exit(1)
@@ -180,51 +179,56 @@ def on_message(client, userdata, msg):  # pylint: disable=unused-argument
     try:
         
         
-        oldState = teslaLib.isDriving
-        
-        teslaLib.update()
+        # oldState = teslaLib.isDriving
+        # teslaLib.update(60*3)
+        # if event != oldState:
+        #     if teslaLib.isDriving:
+        #         send_kakao_message(state.sendKakao_url, f"드라이브 : 주행정지 => 주행시작")
+        #     else :
+        #         send_kakao_message(state.sendKakao_url, f"드라이브 : 주행시작 => 주행정지")
+        #         pathUrl = teslaLib.getPathUrlNClear()
+        #         send_kakao_message(state.sendKakao_url, f"드라이브경로 : {pathUrl}")
 
-        
-        if teslaLib.isDriving != oldState:
-            if teslaLib.isDriving:
+        topic = msg.topic
+        topicValue = msg.payload.decode()
+
+        if topic == TESLAMATE_MQTT_TOPIC_BASE + "state":
+            if topicValue == "driving" and teslaLib.isDriving == False:
+                teslaLib.isDriving = True
                 send_kakao_message(state.sendKakao_url, f"드라이브 : 주행정지 => 주행시작")
-            else :
+            if topicValue != "driving" and teslaLib.isDriving == True:
+                teslaLib.isDriving = False
                 send_kakao_message(state.sendKakao_url, f"드라이브 : 주행시작 => 주행정지")
                 pathUrl = teslaLib.getPathUrlNClear()
                 send_kakao_message(state.sendKakao_url, f"드라이브경로 : {pathUrl}")
 
         
-        for i, item in  enumerate(state.events):
+        for i, item in  enumerate(teslaLib.db["events"]):
             event = item["event"]
             
             
             if event == "전체알람" and item["alarm"] == False:
                 break
+            
             if event == "드라이브":
                 if teslaLib.isDriving:
                     item["eventValue"] = "주행중"
                 else:
                     item["eventValue"] = "주차중"
-            
-            eventValue = msg.payload.decode()
-            
-            if msg.topic == TESLAMATE_MQTT_TOPIC_BASE+ "speed":
-                
-                teslaLib.updatePower(int(eventValue))
-                
-            
-            
+                    
+            # if msg.topic == TESLAMATE_MQTT_TOPIC_BASE+ "speed":
+            #     teslaLib.updatePower(int(eventValue),30)
                     
             if msg.topic == TESLAMATE_MQTT_TOPIC_BASE+ "location":
-                teslaLib.updateLocation(eventValue)
+                teslaLib.updateLocation(topicValue,30)
                 return
             
-            if item["alarm"] == True and msg.topic == TESLAMATE_MQTT_TOPIC_BASE + event and item["eventValue"] != eventValue:
+            if item["alarm"] == True and msg.topic == TESLAMATE_MQTT_TOPIC_BASE + event and item["eventValue"] != topicValue:
                 oldEventValue = item["eventValue"]
-                item["eventValue"] = eventValue
+                item["eventValue"] = topicValue
                 logger.info("값변경 : %s %s", msg.topic, msg.payload.decode())
-                saveData(state.events)
-                send_kakao_message(state.sendKakao_url, f"{event} : {oldEventValue} => {eventValue}")
+                saveData(teslaLib.db)
+                send_kakao_message(state.sendKakao_url, f"{event} : {oldEventValue} => {topicValue}")
                 
                 
     except Exception as e :
@@ -256,7 +260,7 @@ client_status = "접속중"
 def on_disconnect(client, userdata, reason_code, properties=None):
     global client_status
     client_status = "접속실패"
-    send_kakao_message(state.sendKakao_url, f"테슬라 메이트 접속실패")
+    send_kakao_message(state.sendKakao_url, f"테슬라메이트 접속실패")
     logger.info("MQTT disconnected. Reason: %s", reason_code)
 
 def get_mqtt_status():
@@ -310,7 +314,7 @@ def setup_mqtt_client():
 def sendEventList():
     sendMessage = "알람리스트\n"
     sendMessage += f"[이벤트] : [상태] : [알람]\n"
-    for item in state.events:
+    for item in teslaLib.db["events"]:
         event = item["event"]
         eventValue = item["eventValue"]
         alarm = item["alarm"]
@@ -323,6 +327,9 @@ def sendEventList():
 #     saveData(state.events)
 #     sandEventList()
 
+
+    
+
 async def check_state_and_send_messages(url):
     
     
@@ -332,32 +339,60 @@ async def check_state_and_send_messages(url):
         if  len(messageList) == 0:
             return
         
-        for msg in messageList:
+        for message in messageList:
             try:
+                msg = message["msg"]
+                # json = message["json"]
+                # attachment = json["attachment"]
+                # print( 'get attachment : ' +attachment)
                 parts = msg.split(",", 1)
                 alarm = True
-                if parts[0] == '/알람켜기':
-                    alarm = True
-                elif parts[0] == '/알람끄기':
-                    alarm = False
-                elif parts[0] == '/알람리스트':
-                    sendHowTouse()
-                    continue
-                else:
-                    sendHowTouse()
-                    continue
+                
+                match parts[0]:
+                    case '/알람켜기':
+                        alarm = True
+                    case '/알람끄기':
+                        alarm = False
+                    case '/알람리스트':
+                        sendHowTouse()
+                        continue
+                    case '/홈위치리스트':
+                        str = teslaLib.getHomeListDescription()
+                        send_kakao_message( state.sendKakao_url,str)
+                        continue
+                    case '/홈위치추가':
+                        if teslaLib.addHome():
+                            saveData(teslaLib.db)
+                            str = teslaLib.getHomeListDescription()
+                            send_kakao_message( state.sendKakao_url,str)
+                        else:
+                            send_kakao_message( state.sendKakao_url,"테슬라주행이 필요합니다.")
+                        continue
+                    case '/홈위치삭제':
+                        if teslaLib.removeHome(int(parts[1])) :
+                            saveData(teslaLib.db)
+                            str = teslaLib.getHomeListDescription()
+                            send_kakao_message( state.sendKakao_url,str)
+                        else:
+                            send_kakao_message( state.sendKakao_url,"잘못된 인덱스 입니다.")
+
+                        continue
+                    case _:
+                        sendHowTouse()
+                        continue
+                
                  
-                for item in state.events:
+                for item in teslaLib.db["events"]:
                     if item["event"] == parts[1]:
                         item["alarm"] = alarm
                         parts[1] = ""
                         sendEventList()
-                        saveData(state.events)
+                        saveData(teslaLib.db)
                 if parts[1] == "":
                     continue
-                state.events.append({"event":parts[1],"alarm":alarm,"eventValue":""})
+                teslaLib.db["events"].append({"event":parts[1],"alarm":alarm,"eventValue":""})
                 sendEventList()
-                saveData(state.events)
+                saveData(teslaLib.db)
                 
             except Exception  as e:
                 logger.info(f"파싱 실패 : {e}")    
@@ -443,10 +478,14 @@ def sendHowTouse():
     start_message = "테슬라메이트 연동 카카오봇 시작\n" \
             "명령어\n" \
             "/알람리스트\n" \
+            "/알람끄기,전체알람 <= 모든 이벤트 끄기\n"\
+            "/알람켜기,전체알람 <= 모든 이벤트 켜기\n"\
             "/알람끄기,[이벤트이름]\n" \
             "/알람켜기,[이벤트이름]\n" \
-            "/알람끄기,state <= 차량상태 이벤트 끄기 \n" \
-            "/알람끄기,전체알람 <= 모든 이벤트 끄기"
+            "/홈위치 <= 홈위치리스트\n"\
+            "/홈위치추가 <= 마지막인식위치 홈위치추가\n"\
+            "/홈위치삭제,[번호] <= 홈위치삭제"
+            
                         
                 
     send_kakao_message(state.sendKakao_url, start_message)
@@ -461,12 +500,14 @@ async def main():
         state.sendKakao_url = get_env_variable(SEND_KAKAO_URL)
         state.getKakao_url= get_env_variable(GET_KAKAO_URL)
         
-        state.events = loadData()
-        if state.events == None:
-            # state.events = TESLA_EVENTS_DEFAULT
-            state.events = get_env_variable(TESLA_EVENTS,TESLA_EVENTS_DEFAULT)
+        teslaLib.db = loadData()
         
-        logger.info (state.events)
+        if teslaLib.db == None:
+            # state.events = TESLA_EVENTS_DEFAULT
+            events = get_env_variable(TESLA_EVENTS,TESLA_EVENTS_DEFAULT)
+            teslaLib.dbInit(events)
+        
+        logger.info (teslaLib.db)
         
         sendHowTouse()
     
