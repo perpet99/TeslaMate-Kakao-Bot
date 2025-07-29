@@ -11,6 +11,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 import paho.mqtt.client as mqtt
 from teslaLib import TeslaLib
+import time
 
 # from telegram import Bot
 # from telegram.constants import ParseMode
@@ -195,12 +196,30 @@ def on_message(client, userdata, msg):  # pylint: disable=unused-argument
         if topic == TESLAMATE_MQTT_TOPIC_BASE + "state":
             if topicValue == "driving" and teslaLib.isDriving == False:
                 teslaLib.isDriving = True
-                send_kakao_message(state.sendKakao_url, f"드라이브 : 주행정지 => 주행시작")
+                teslaLib.oldOdometer = teslaLib.odometer
+                teslaLib.oldBattery_level = teslaLib.battery_level
+                teslaLib.drivingTime = time.time()
+                str = f"드라이브 : 주행정지 => 주행시작\n주행거리({teslaLib.odometer}km, 0km 이동)\n"
+                str += f"배터리({teslaLib.battery_level}%, 0% 사용)"
+                
+                send_kakao_message(state.sendKakao_url, str)
+                
             if topicValue != "driving" and teslaLib.isDriving == True:
                 teslaLib.isDriving = False
-                send_kakao_message(state.sendKakao_url, f"드라이브 : 주행시작 => 주행정지")
+                str = f"드라이브 : 주행시작 => 주행정지\n주행거리({teslaLib.odometer}km, {teslaLib.odometer-teslaLib.oldOdometer}km 이동)\n"
+                str += f"배터리({teslaLib.battery_level}%, {teslaLib.battery_level-teslaLib.battery_level}% 사용)\n"
+                sec = time.time() - teslaLib.drivingTime
+                str += f"이동시간({int(sec/60)}분)"
+                
+                send_kakao_message(state.sendKakao_url, str)
                 pathUrl = teslaLib.getPathUrlNClear()
                 send_kakao_message(state.sendKakao_url, f"드라이브경로 : {pathUrl}")
+        
+        if topic == TESLAMATE_MQTT_TOPIC_BASE + "odometer":
+            teslaLib.odometer = float(topicValue)
+
+        if topic == TESLAMATE_MQTT_TOPIC_BASE + "battery_level":
+            teslaLib.battery_level = int(topicValue)
 
         
         for i, item in  enumerate(teslaLib.db["events"]):
@@ -227,7 +246,7 @@ def on_message(client, userdata, msg):  # pylint: disable=unused-argument
                 oldEventValue = item["eventValue"]
                 item["eventValue"] = topicValue
                 logger.info("값변경 : %s %s", msg.topic, msg.payload.decode())
-                saveData(teslaLib.db)
+                teslaLib.saveData()
                 send_kakao_message(state.sendKakao_url, f"{event} : {oldEventValue} => {topicValue}")
                 
                 
@@ -349,6 +368,24 @@ async def check_state_and_send_messages(url):
                 alarm = True
                 
                 match parts[0]:
+                    case "/백업":
+                        dump = teslaLib.dump()
+                        send_kakao_message( state.sendKakao_url,dump)
+                        continue
+                    case "/복원":
+                        try :
+                            dump = json.loads(parts[1])
+                            if "events" in dump and "home" in dump:
+                                teslaLib.db = dump
+                                teslaLib.saveData()
+                                send_kakao_message( state.sendKakao_url,"복원성공")                        
+                            else:
+                                send_kakao_message( state.sendKakao_url,"복원실패")                        
+                        except Exception  as e:
+                            print (e)
+                            send_kakao_message( state.sendKakao_url,"복원실패.")                        
+                        continue
+                    
                     case '/알람켜기':
                         alarm = True
                     case '/알람끄기':
@@ -362,7 +399,7 @@ async def check_state_and_send_messages(url):
                         continue
                     case '/홈위치추가':
                         if teslaLib.addHome():
-                            saveData(teslaLib.db)
+                            teslaLib.saveData()
                             str = teslaLib.getHomeListDescription()
                             send_kakao_message( state.sendKakao_url,str)
                         else:
@@ -370,7 +407,7 @@ async def check_state_and_send_messages(url):
                         continue
                     case '/홈위치삭제':
                         if teslaLib.removeHome(int(parts[1])) :
-                            saveData(teslaLib.db)
+                            teslaLib.saveData()
                             str = teslaLib.getHomeListDescription()
                             send_kakao_message( state.sendKakao_url,str)
                         else:
@@ -387,12 +424,12 @@ async def check_state_and_send_messages(url):
                         item["alarm"] = alarm
                         parts[1] = ""
                         sendEventList()
-                        saveData(teslaLib.db)
+                        teslaLib.saveData()
                 if parts[1] == "":
                     continue
                 teslaLib.db["events"].append({"event":parts[1],"alarm":alarm,"eventValue":""})
                 sendEventList()
-                saveData(teslaLib.db)
+                teslaLib.saveData()
                 
             except Exception  as e:
                 logger.info(f"파싱 실패 : {e}")    
@@ -459,19 +496,7 @@ def send_kakao_message(webhook_url, message):
 #         )
 #     logging.debug("Message sent.")
 
-configFileName = 'data.json'
 
-def loadData():
-    if os.path.exists(configFileName) == False:
-        return None
-    with open(configFileName, "r", encoding="utf-8") as file:
-        data = json.load(file)
-        return data
-    return None
-
-def saveData(data):
-    with open(configFileName, "w", encoding="utf-8") as file:
-        json.dump(data, file, ensure_ascii=False, indent=4)
 
     
 def sendHowTouse():
@@ -500,7 +525,7 @@ async def main():
         state.sendKakao_url = get_env_variable(SEND_KAKAO_URL)
         state.getKakao_url= get_env_variable(GET_KAKAO_URL)
         
-        teslaLib.db = loadData()
+        teslaLib.db = teslaLib.loadData()
         
         if teslaLib.db == None:
             # state.events = TESLA_EVENTS_DEFAULT
@@ -520,6 +545,13 @@ async def main():
                 
                 await check_state_and_send_messages(state.sendKakao_url)
 
+                msgList = teslaLib.updateHome()
+                if 0 < len(msgList):
+                    teslaLib.saveData()
+                    
+                for item in msgList:
+                    send_kakao_message(state.sendKakao_url, item)
+                
                 logging.debug("Sleeping for 5 second.")
                 await asyncio.sleep(5)
         except KeyboardInterrupt:

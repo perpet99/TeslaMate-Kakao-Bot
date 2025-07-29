@@ -56,6 +56,9 @@ import time
 # link = generate_google_maps_link(origin, destination, waypoints)
 # print("구글 지도 경로 링크:", link)
 
+
+print(float("202.333"))
+
 teslaLib = TeslaLib()
 
 # time.sleep(2)
@@ -70,51 +73,55 @@ teslaLib.addHome()
 teslaLib.updateLocation('{"latitude":37.623855,"longitude":327.15779}',-1)
 teslaLib.addHome()
 
+print(teslaLib.db)
 
+print(teslaLib.updateHome())
 
 print(teslaLib.db)
 
-print(teslaLib.getHomeListDescription())
+# print(teslaLib.db)
 
-teslaLib.removeHome(1)
+# print(teslaLib.getHomeListDescription())
 
-print(teslaLib.getHomeListDescription())
+# teslaLib.removeHome(1)
 
-print(teslaLib.isDriving)
+# print(teslaLib.getHomeListDescription())
 
-# teslaLib.update(0)
+# print(teslaLib.isDriving)
 
-print(teslaLib.isDriving)
+# # teslaLib.update(0)
 
-print(teslaLib.location_list)
+# print(teslaLib.isDriving)
 
-path = teslaLib.getPathUrlNClear()
+# print(teslaLib.location_list)
 
-print(path)
+# path = teslaLib.getPathUrlNClear()
 
-import math
+# print(path)
 
-def get_distance_km(lat1, lon1, lat2, lon2):
-    R = 6371  # 지구 반지름 (km)
+# import math
 
-    def to_rad(deg):
-        return deg * math.pi / 180
+# def get_distance_km(lat1, lon1, lat2, lon2):
+#     R = 6371  # 지구 반지름 (km)
 
-    d_lat = to_rad(lat2 - lat1)
-    d_lon = to_rad(lon2 - lon1)
+#     def to_rad(deg):
+#         return deg * math.pi / 180
 
-    a = math.sin(d_lat / 2) ** 2 + \
-        math.cos(to_rad(lat1)) * math.cos(to_rad(lat2)) * \
-        math.sin(d_lon / 2) ** 2
+#     d_lat = to_rad(lat2 - lat1)
+#     d_lon = to_rad(lon2 - lon1)
 
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    distance = R * c
+#     a = math.sin(d_lat / 2) ** 2 + \
+#         math.cos(to_rad(lat1)) * math.cos(to_rad(lat2)) * \
+#         math.sin(d_lon / 2) ** 2
 
-    return round(distance, 3)  # 소수점 3자리
+#     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+#     distance = R * c
 
-# 사용 예시
-dist = get_distance_km(37.5665, 126.9780, 35.1796, 129.0756)
-print(f"두 지점 간 거리는 {dist}km 입니다.")
+#     return round(distance, 3)  # 소수점 3자리
+
+# # 사용 예시
+# dist = get_distance_km(37.5665, 126.9780, 35.1796, 129.0756)
+# print(f"두 지점 간 거리는 {dist}km 입니다.")
 
 # teslaLib.updateLocation('{"latitude":37.5665,"longitude":126.9780}')
 # teslaLib.updatePower(1,0)

@@ -5,6 +5,11 @@ import time
 import json
 
 import math
+import os
+
+configFileName = 'data.json'
+
+
 
 def get_distance_km(lat1, lon1, lat2, lon2):
     R = 6371  # 지구 반지름 (km)
@@ -42,8 +47,26 @@ class TeslaLib:
         self.power = 0
         self.location = None
         self.db = None    
+        self.oldOdometer = 0
+        self.odometer = 0
+        self.oldBattery_level = 0
+        self.battery_level = 0
+        self.drivingTime = time.time()
+        
+    def loadData(self):
+        if os.path.exists(configFileName) == False:
+            return None
+        with open(configFileName, "r", encoding="utf-8") as file:
+            data = json.load(file)
+            return data
+        return None
+
+    def saveData(self):
+        with open(configFileName, "w", encoding="utf-8") as file:
+            json.dump(self.db, file, ensure_ascii=False, indent=4)
     
-    
+    def dump(self):
+        return json.dumps(self.db, ensure_ascii=False)
     
     def getHomeListDescription(self):
         str = ""
@@ -52,14 +75,43 @@ class TeslaLib:
             longitude = item["longitude"]
             str += f"홈위치({i}) https://www.google.com/maps/dir/{latitude},{longitude}\n"
         return str
+    
+    def updateHome(self):
+        changeList = []
+        if self.isDriving == False:
+            return changeList
+        if self.location == None:
+            return changeList
+        item = json.loads(self.location)
         
+        curLatitude = item["latitude"]
+        curLongitude = item["longitude"]
+        
+        for i,item in enumerate(self.db["home"]):
+            latitude = item["latitude"]
+            longitude = item["longitude"]
+            
+            km = get_distance_km(curLatitude,curLongitude,latitude,longitude)
+            if km < 1 and item["state"] == "out":
+                item["state"] = "in"
+                changeList.append(f"홈위치({i}) 1 km 접근")
+            if 2 < km and item["state"] == "in":
+                item["state"] = "out"
+                changeList.append(f"홈위치({i}) 2 km 이탈")
+        return changeList
     
     def addHome(self):
         if self.location == None :
              return False
         # Ensure home is always stored as dict, not string
         if isinstance(self.location, str):
-            self.db["home"].append(json.loads(self.location))
+            item = json.loads(self.location)
+            # latitude = item["latitude"]
+            # longitude = item["longitude"]
+            # print( latitude +longitude )
+            item["state"] =  "in"
+            print(item)
+            self.db["home"].append(item)
         else:
             self.db["home"].append(self.location)
         return True
