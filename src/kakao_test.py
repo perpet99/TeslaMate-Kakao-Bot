@@ -1,6 +1,10 @@
 import requests
 from teslaLib import TeslaLib
 
+from teslamate_kakao_bot import State ,on_message2
+
+
+
 # def send_discord_message(webhook_url, message):
 #     data = {
 #         "content": message  # 디스코드 채널에 표시될 메시지
@@ -56,28 +60,34 @@ import time
 # link = generate_google_maps_link(origin, destination, waypoints)
 # print("구글 지도 경로 링크:", link)
 
+# teslaLib = TeslaLib()
 
-print(float("202.333"))
+on_message2("teslamate/cars/1/" + "charging_state","Charging")
 
-teslaLib = TeslaLib()
+# print(float("202.333"))
 
-# time.sleep(2)
+# teslaLib = TeslaLib()
 
-teslaLib.dbInit([])
+# # time.sleep(2)
 
-teslaLib.isDriving = True
-teslaLib.updateLocation('{"latitude":37.623855,"longitude":127.15779}',-1)
-teslaLib.addHome()
-teslaLib.updateLocation('{"latitude":37.623855,"longitude":227.15779}',-1)
-teslaLib.addHome()
-teslaLib.updateLocation('{"latitude":37.623855,"longitude":327.15779}',-1)
-teslaLib.addHome()
+# teslaLib.dbInit([])
 
-print(teslaLib.db)
+# teslaLib.isDriving = True
+# teslaLib.updateLocation('{"latitude":37.623855,"longitude":127.15779}',-1)
+# teslaLib.addHome()
+# teslaLib.updateLocation('{"latitude":37.623855,"longitude":227.15779}',-1)
+# teslaLib.addHome()
+# teslaLib.updateLocation('{"latitude":37.623855,"longitude":327.15779}',-1)
+# teslaLib.addHome()
 
-print(teslaLib.updateHome())
+# print(teslaLib.db)
 
-print(teslaLib.db)
+# print(teslaLib.updateHome())
+
+# print(teslaLib.db)
+
+
+
 
 # print(teslaLib.db)
 

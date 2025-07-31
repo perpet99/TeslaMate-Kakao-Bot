@@ -172,6 +172,106 @@ def on_connect(client, userdata, flags, reason_code, properties=None):  # pylint
     logger.info("Waiting for MQTT messages...")
 
 
+
+
+
+
+
+def on_message2(topic,topicValue):
+
+    if topic == TESLAMATE_MQTT_TOPIC_BASE + "state":
+        # 드라이브시작
+        if topicValue == "driving" and teslaLib.isDriving == False: 
+            teslaLib.isDriving = True
+            teslaLib.oldOdometer = teslaLib.odometer
+            teslaLib.oldBattery_level = teslaLib.battery_level
+            teslaLib.drivingTime = time.time()
+            str = f"드라이브\n주행정지 => 주행시작\n주행거리({teslaLib.odometer}km, 0km 이동)\n"
+            str += f"배터리({teslaLib.battery_level}%, 0% 사용)"
+            
+            send_kakao_message(state.sendKakao_url, str)
+            # 드라이브종료
+        if topicValue != "driving" and teslaLib.isDriving == True:
+            teslaLib.isDriving = False
+            teslaLib.lastMoveKM = round(teslaLib.odometer-teslaLib.oldOdometer, 2)
+            if teslaLib.lastMoveKM < 2:
+                send_kakao_message(state.sendKakao_url, f"드라이브\n주행시작 => 주행정지\n주행거리({teslaLib.odometer}km, {teslaLib.lastMoveKM}km 근접이동)\n")    
+            else:
+                teslaLib.lastMoveBatteryLevel = (teslaLib.oldBattery_level-teslaLib.battery_level)+ 0.01
+                str = f"드라이브\n주행시작 => 주행정지\n주행거리({teslaLib.odometer}km, {teslaLib.lastMoveKM}km 이동)\n"
+                str += f"배터리({teslaLib.battery_level}%, {teslaLib.lastMoveBatteryLevel}% 사용)\n"
+                sec = time.time() - teslaLib.drivingTime
+                str += f"이동시간({int(sec/60)}분)"
+                str += f"전비({round(teslaLib.lastMoveKM/(teslaLib.lastMoveBatteryLevel*teslaLib.chargingPerBatteryLevel),2)} km/kWh)"
+                
+                # str += f"전비(충전정보가 필요합니다.)"
+                
+                send_kakao_message(state.sendKakao_url, str)
+                pathUrl = teslaLib.getPathUrlNClear()
+                send_kakao_message(state.sendKakao_url, f"드라이브경로\n{pathUrl}")
+            
+            # 충전시작
+        if topicValue == "charging" and teslaLib.isCharging == False:
+            teslaLib.isCharging = True
+            teslaLib.oldBattery_level = teslaLib.battery_level
+            send_kakao_message(state.sendKakao_url, f"충전시작\n배터리레벨({teslaLib.oldBattery_level}%)")
+        
+        # 충전종료
+        if topicValue != "charging" and teslaLib.isCharging == True:
+            teslaLib.isCharging = False
+            if teslaLib.oldBattery_level == 0:
+                send_kakao_message(state.sendKakao_url, "충전종료\n데이터수집이 필요합니다.")
+            else:
+                # total = teslaLib.addedCharging
+                addedBatteryLevel = (teslaLib.battery_level - teslaLib.oldBattery_level) + 0.01
+                    
+                teslaLib.chargingPerBatteryLevel  = (teslaLib.addedCharging / addedBatteryLevel) + 0.01
+                str = f"충전종료\n배터리({teslaLib.battery_level}%, {addedBatteryLevel}% 충전)\n"
+                str += f"충전({round(teslaLib.addedCharging,2)}kWh, 1% 당 {teslaLib.chargingPerBatteryLevel} kWh 충전)\n"
+                str += f"예상전비,마지막 주행거리기준({round(teslaLib.lastMoveKM/(teslaLib.lastMoveBatteryLevel*teslaLib.chargingPerBatteryLevel),2)} km/kWh)"
+                send_kakao_message(state.sendKakao_url, str)
+                
+    if topic == TESLAMATE_MQTT_TOPIC_BASE + "charge_energy_added":
+        teslaLib.addedCharging = (float(topicValue))
+        # if teslaLib.isCharginaddChargingWhg == True:
+            
+    
+    if topic == TESLAMATE_MQTT_TOPIC_BASE + "odometer":
+        teslaLib.odometer = float(topicValue)
+
+    if topic == TESLAMATE_MQTT_TOPIC_BASE + "battery_level":
+        teslaLib.battery_level = int(topicValue)
+
+    
+    for i, item in  enumerate(teslaLib.db["events"]):
+        event = item["event"]
+        
+        if event == "전체알람" and item["alarm"] == False:
+            break
+        
+        if event == "드라이브":
+            if teslaLib.isDriving:
+                item["eventValue"] = "주행중"
+            else:
+                item["eventValue"] = "주차중"
+                
+        # if msg.topic == TESLAMATE_MQTT_TOPIC_BASE+ "speed":
+        #     teslaLib.updatePower(int(eventValue),30)
+                
+        if topic == TESLAMATE_MQTT_TOPIC_BASE+ "location":
+            teslaLib.updateLocation(topicValue,30)
+            return
+        
+        if item["alarm"] == True and topic == TESLAMATE_MQTT_TOPIC_BASE + event and item["eventValue"] != topicValue:
+            oldEventValue = item["eventValue"]
+            item["eventValue"] = topicValue
+            logger.info("값변경 : %s %s", topic, topicValue)
+            teslaLib.saveData()
+            send_kakao_message(state.sendKakao_url, f"{event} : {oldEventValue} => {topicValue}")
+            
+
+
+
 def on_message(client, userdata, msg):  # pylint: disable=unused-argument
     """ The callback for when a PUBLISH message is received from the server."""
     global state  # pylint: disable=global-variable-not-assigned, # noqa: F824
@@ -193,62 +293,8 @@ def on_message(client, userdata, msg):  # pylint: disable=unused-argument
         topic = msg.topic
         topicValue = msg.payload.decode()
 
-        if topic == TESLAMATE_MQTT_TOPIC_BASE + "state":
-            if topicValue == "driving" and teslaLib.isDriving == False:
-                teslaLib.isDriving = True
-                teslaLib.oldOdometer = teslaLib.odometer
-                teslaLib.oldBattery_level = teslaLib.battery_level
-                teslaLib.drivingTime = time.time()
-                str = f"드라이브 : 주행정지 => 주행시작\n주행거리({teslaLib.odometer}km, 0km 이동)\n"
-                str += f"배터리({teslaLib.battery_level}%, 0% 사용)"
-                
-                send_kakao_message(state.sendKakao_url, str)
-                
-            if topicValue != "driving" and teslaLib.isDriving == True:
-                teslaLib.isDriving = False
-                str = f"드라이브 : 주행시작 => 주행정지\n주행거리({teslaLib.odometer}km, {teslaLib.odometer-teslaLib.oldOdometer}km 이동)\n"
-                str += f"배터리({teslaLib.battery_level}%, {teslaLib.battery_level-teslaLib.battery_level}% 사용)\n"
-                sec = time.time() - teslaLib.drivingTime
-                str += f"이동시간({int(sec/60)}분)"
-                
-                send_kakao_message(state.sendKakao_url, str)
-                pathUrl = teslaLib.getPathUrlNClear()
-                send_kakao_message(state.sendKakao_url, f"드라이브경로 : {pathUrl}")
+        on_message2(topic,topicValue)
         
-        if topic == TESLAMATE_MQTT_TOPIC_BASE + "odometer":
-            teslaLib.odometer = float(topicValue)
-
-        if topic == TESLAMATE_MQTT_TOPIC_BASE + "battery_level":
-            teslaLib.battery_level = int(topicValue)
-
-        
-        for i, item in  enumerate(teslaLib.db["events"]):
-            event = item["event"]
-            
-            
-            if event == "전체알람" and item["alarm"] == False:
-                break
-            
-            if event == "드라이브":
-                if teslaLib.isDriving:
-                    item["eventValue"] = "주행중"
-                else:
-                    item["eventValue"] = "주차중"
-                    
-            # if msg.topic == TESLAMATE_MQTT_TOPIC_BASE+ "speed":
-            #     teslaLib.updatePower(int(eventValue),30)
-                    
-            if msg.topic == TESLAMATE_MQTT_TOPIC_BASE+ "location":
-                teslaLib.updateLocation(topicValue,30)
-                return
-            
-            if item["alarm"] == True and msg.topic == TESLAMATE_MQTT_TOPIC_BASE + event and item["eventValue"] != topicValue:
-                oldEventValue = item["eventValue"]
-                item["eventValue"] = topicValue
-                logger.info("값변경 : %s %s", msg.topic, msg.payload.decode())
-                teslaLib.saveData()
-                send_kakao_message(state.sendKakao_url, f"{event} : {oldEventValue} => {topicValue}")
-                
                 
     except Exception as e :
         logger.info(f"Received error : {e}")
@@ -507,7 +553,7 @@ def sendHowTouse():
             "/알람켜기,전체알람 <= 모든 이벤트 켜기\n"\
             "/알람끄기,[이벤트이름]\n" \
             "/알람켜기,[이벤트이름]\n" \
-            "/홈위치 <= 홈위치리스트\n"\
+            "/홈위치리스트 <= 홈위치리스트\n"\
             "/홈위치추가 <= 마지막인식위치 홈위치추가\n"\
             "/홈위치삭제,[번호] <= 홈위치삭제"
             
@@ -539,6 +585,11 @@ async def main():
         client = setup_mqtt_client()
         client.loop_start()
     
+        # 테스트 코드
+        # on_message2("teslamate/cars/1/" + "charging_state","Charging")
+        # on_message2(TESLAMATE_MQTT_TOPIC_BASE + "state","driving")
+        # on_message2(TESLAMATE_MQTT_TOPIC_BASE + "state","online")
+        
         try:
             count = 0
             while True:

@@ -40,10 +40,17 @@ class TeslaLib:
     def __init__(self):
         self.power_list = []
         self.location_list= []
+        # self.charging_list = []
+        
         self.power_last_update_time = time.time()
         self.location_last_update_time = time.time()
         self.update_time = time.time()
         self.isDriving = False
+        self.lastMoveKM = 0.0
+        self.lastMoveBatteryLevel = 0.01
+        self.isCharging = False
+        self.chargingPerBatteryLevel = 0.01
+        self.addedCharging = 0.01
         self.power = 0
         self.location = None
         self.db = None    
@@ -53,6 +60,12 @@ class TeslaLib:
         self.battery_level = 0
         self.drivingTime = time.time()
         
+    def getTotalAddedWhNClear(self):
+        total = sum(self.charging_list)
+        self.charging_list.clear()
+        return total
+        # return round(total, 2)  # 소수점 3자리
+    
     def loadData(self):
         if os.path.exists(configFileName) == False:
             return None
