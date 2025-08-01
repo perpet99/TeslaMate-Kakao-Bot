@@ -49,7 +49,7 @@ class TeslaLib:
         self.lastMoveKM = 0.0
         self.lastMoveBatteryLevel = 0.01
         self.isCharging = False
-        self.chargingPerBatteryLevel = 0.01
+        self.chargingPerBatteryLevel = 0
         self.addedCharging = 0.01
         self.power = 0
         self.location = None

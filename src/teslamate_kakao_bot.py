@@ -201,8 +201,11 @@ def on_message2(topic,topicValue):
                 str = f"드라이브\n주행시작 => 주행정지\n주행거리({teslaLib.odometer}km, {teslaLib.lastMoveKM}km 이동)\n"
                 str += f"배터리({teslaLib.battery_level}%, {teslaLib.lastMoveBatteryLevel}% 사용)\n"
                 sec = time.time() - teslaLib.drivingTime
-                str += f"이동시간({int(sec/60)}분)"
-                str += f"전비({round(teslaLib.lastMoveKM/(teslaLib.lastMoveBatteryLevel*teslaLib.chargingPerBatteryLevel),2)} km/kWh)"
+                str += f"이동시간({int(sec/60)}분)\n"
+                if 0 < teslaLib.chargingPerBatteryLevel:
+                    str += f"전비({round(teslaLib.lastMoveKM/(teslaLib.lastMoveBatteryLevel*teslaLib.chargingPerBatteryLevel),2)} km/kWh)"
+                else:    
+                    str += f"전비(충전정보가 필요합니다.)"
                 
                 # str += f"전비(충전정보가 필요합니다.)"
                 
@@ -225,7 +228,7 @@ def on_message2(topic,topicValue):
                 # total = teslaLib.addedCharging
                 addedBatteryLevel = (teslaLib.battery_level - teslaLib.oldBattery_level) + 0.01
                     
-                teslaLib.chargingPerBatteryLevel  = (teslaLib.addedCharging / addedBatteryLevel) + 0.01
+                teslaLib.chargingPerBatteryLevel  = round((teslaLib.addedCharging / addedBatteryLevel) + 0.01,2)
                 str = f"충전종료\n배터리({teslaLib.battery_level}%, {addedBatteryLevel}% 충전)\n"
                 str += f"충전({round(teslaLib.addedCharging,2)}kWh, 1% 당 {teslaLib.chargingPerBatteryLevel} kWh 충전)\n"
                 str += f"예상전비,마지막 주행거리기준({round(teslaLib.lastMoveKM/(teslaLib.lastMoveBatteryLevel*teslaLib.chargingPerBatteryLevel),2)} km/kWh)"
