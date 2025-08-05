@@ -62,23 +62,30 @@ import time
 
 # teslaLib = TeslaLib()
 
-on_message2("teslamate/cars/1/" + "charging_state","Charging")
+# on_message2("teslamate/cars/1/" + "charging_state","Charging")
 
 # print(float("202.333"))
 
-# teslaLib = TeslaLib()
+teslaLib = TeslaLib()
 
 # # time.sleep(2)
 
-# teslaLib.dbInit([])
+teslaLib.dbInit([])
 
-# teslaLib.isDriving = True
-# teslaLib.updateLocation('{"latitude":37.623855,"longitude":127.15779}',-1)
-# teslaLib.addHome()
-# teslaLib.updateLocation('{"latitude":37.623855,"longitude":227.15779}',-1)
-# teslaLib.addHome()
-# teslaLib.updateLocation('{"latitude":37.623855,"longitude":327.15779}',-1)
-# teslaLib.addHome()
+teslaLib.isDriving = True
+teslaLib.updateLocation('{"latitude":7.623855,"longitude":127.15779}',-1)
+teslaLib.addHome()
+teslaLib.updateLocation('{"latitude":17.623855,"longitude":227.15779}',-1)
+teslaLib.addHome()
+teslaLib.updateLocation('{"latitude":27.623855,"longitude":327.15779}',-1)
+teslaLib.addHome()
+
+teslaLib.updateLocation('{"latitude":37.623855,"longitude":327.15779}',-1)
+teslaLib.addHome()
+teslaLib.updateLocation('{"latitude":47.623855,"longitude":327.15779}',-1)
+teslaLib.addHome()
+teslaLib.updateLocation('{"latitude":57.623855,"longitude":327.15779}',-1)
+teslaLib.addHome()
 
 # print(teslaLib.db)
 
@@ -105,9 +112,9 @@ on_message2("teslamate/cars/1/" + "charging_state","Charging")
 
 # print(teslaLib.location_list)
 
-# path = teslaLib.getPathUrlNClear()
+path = teslaLib.getPathUrlNClear()
 
-# print(path)
+print(path)
 
 # import math
 

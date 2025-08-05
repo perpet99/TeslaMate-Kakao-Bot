@@ -92,7 +92,7 @@ https://open.kakao.com/o/glqIjMIh
 
 docker build -t perpet77/teslamate-kakao-bot:latest .
 
-
+docker push perpet77/teslamate-kakao-bot:latest
 ## 업데이트
 
 Pull the new images:

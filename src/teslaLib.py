@@ -220,10 +220,27 @@ class TeslaLib:
         
     def getPathUrlNClear(self):
         str =''
-        for item in self.location_list:
+        length = len(self.location_list)
+        
+        if length < 1:
+            return "https://www.google.com/maps/dir"
+        
+        addValue = length / 150.0
+        if addValue < 1:
+            addValue = 1
+        index = 0
+        sumValue = 0.0
+        while index < length:
+            
+            item = self.location_list[index]
             latitude = item["latitude"]
             longitude = item["longitude"]
             str += f"/{latitude},{longitude}"
+
+            sumValue += addValue
+            # print(sumValue)
+            index = int(sumValue)
+        
         self.location_list.clear()
         
         return "https://www.google.com/maps/dir" + str
